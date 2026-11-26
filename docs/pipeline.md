@@ -69,14 +69,14 @@ Todos os merges partem do item, com `how="left"` e `validate="many_to_one"`. O `
 | + customers | `customer_id` (do pedido) | left, N:1 | 112.650 | 112.650 | 99.441 | 0 |
 | + sellers | `seller_id` | left, N:1 | 112.650 | 112.650 | 3.095 | 0 |
 
-Essas duas tabelas saem na tela toda vez que o `04_pipeline.py` roda (`historico_merges` e `resumir_impacto_antes_depois`).
+Essas duas tabelas saem na tela toda vez que o `04_pipeline.py` roda: a da limpeza vem de `resumir_impacto_antes_depois` (Frente 1) e a dos merges vem de `historico_merges`. A `historico_merges` refaz os 4 merges um de cada vez, só para medir as linhas antes e depois de cada um, e usa `indicator=True` para contar os itens sem par. A tabela final continua vindo do `juntar_tabelas` do João.
 
 ## Decisões da Frente 3
 
 1. **Seleção de atributos fixa.** O `selecionar_atributos` da Frente 2 recalcula a correlação com o frete nos dados que recebe. Em recortes de 2 a 5.000 pedidos, a tabela saía com 47, 48 ou 49 colunas. O pipeline usa a decisão que o João tomou na base completa (diário nº 16) como lista fixa. Assim a tabela tem sempre as mesmas colunas. Na base completa o resultado é idêntico ao do `transformar_bases`.
 2. **Item sem par fica na tabela.** Se um item não acha pedido, produto, cliente ou vendedor, ele continua na tabela, com vazio nas colunas da outra base. O pipeline mostra quantos itens ficaram sem par em cada merge. Na base real são 0.
 3. **Códigos e escalas valem dentro da execução.** Os códigos (`*_cod`) e as escalas (`*_minmax`, `*_zscore`) são calculados sobre os dados que entram. Num recorte, SP pode receber outro código. Para comparar recortes, usar as colunas originais (UF em texto, preço, frete, peso).
-4. **CSV reproduzível.** O CSV é gravado sem índice, com quebra de linha `\n` e sem arredondar. O arquivo sai igual byte a byte no pandas 2.2.3 e no 3.0.6. Tem 76,4 MB, abaixo do limite de 100 MB do GitHub.
+4. **CSV reproduzível.** O CSV é gravado sem índice, com quebra de linha `\n` e sem arredondar (`OPCOES_CSV`). O arquivo sai igual byte a byte no pandas 2.2.3 e no 3.0.6. O `.gitattributes` mantém o LF também no checkout do Windows, e o teste completo confere que o CSV versionado é exatamente o que o pipeline gera. Tem 76,4 MB, abaixo do limite de 100 MB do GitHub.
 
 ## Como reproduzir
 
@@ -91,4 +91,5 @@ python 04_pipeline.py --amostra 300   # recorte rápido para mostrar ao vivo
 
 - Os valores de `*_cod`, `*_minmax` e `*_zscore` de um recorte não são comparáveis com os da base completa (decisão 3).
 - A lista de colunas tiradas por correlação foi decidida na base de 2016–2018. Se a base mudar, vale rodar o `selecionar_atributos` de novo na base inteira e atualizar a lista.
+- Se o `03` criar, renomear ou tirar uma coluna, o pipeline para e mostra qual coluna está sobrando ou faltando. Nesse caso é preciso atualizar `COLUNAS_FINAIS` e o `docs/dicionario_dados.md` junto.
 - O pipeline não filtra status de pedido. Esse filtro fica para a análise e o painel, como decidido na Frente 1 (diário nº 7).

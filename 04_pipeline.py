@@ -11,6 +11,7 @@ Rodar:
     python 04_pipeline.py --amostra 300   -> recorte de 300 pedidos, só mostra na tela
 """
 
+import argparse
 import importlib
 import sys
 from pathlib import Path
@@ -24,6 +25,10 @@ transformacoes = importlib.import_module("03_transformacoes")
 PASTA = Path(__file__).parent
 PASTA_RAW = PASTA / "data" / "raw"
 CSV_FINAL = PASTA / "data" / "processed" / "olist_frete_analitico.csv"
+
+# lineterminator="\n": o arquivo sai igual no Windows, no Linux e no Mac.
+# O 05_testes_pipeline.py usa as mesmas opções para conferir o CSV byte a byte.
+OPCOES_CSV = {"index": False, "lineterminator": "\n"}
 
 # Mesma ordem dos parâmetros de preprocessar.
 ARQUIVOS_BRUTOS = [
@@ -117,33 +122,42 @@ def preprocessar(orders, items, products, customers, sellers):
     if df.duplicated(subset=["order_id", "order_item_id"]).any():
         raise ValueError("chave (order_id, order_item_id) repetida na tabela final")
     if list(df.columns) != COLUNAS_FINAIS:
-        raise ValueError("as colunas não batem com o dicionário de dados")
+        sobrando = [col for col in df.columns if col not in COLUNAS_FINAIS]
+        faltando = [col for col in COLUNAS_FINAIS if col not in df.columns]
+        raise ValueError(
+            f"as colunas não batem com COLUNAS_FINAIS. Sobrando: {sobrando}. "
+            f"Faltando: {faltando}. (Listas vazias = só a ordem mudou.) "
+            "Se a mudança no 03 foi de propósito, atualize COLUNAS_FINAIS e o dicionário."
+        )
     return df
 
 
-def historico_merges(orders, items, products, customers, sellers, df):
+def historico_merges(orders, items, products, customers, sellers):
     """
-    Monta a tabela do histórico dos merges. Recebe as bases já limpas e a tabela final.
-    Não refaz os merges: só conta, com isin, quantos itens não acham par em cada um.
+    Refaz os 4 merges do juntar_tabelas, um de cada vez, só para medir cada um.
+    Recebe as bases já limpas. A tabela final continua vindo do preprocessar.
     """
-    merges = [
-        ("items + orders", "order_id", orders, items["order_id"].isin(orders["order_id"])),
-        ("+ products", "product_id", products, items["product_id"].isin(products["product_id"])),
-        # o cliente vem do pedido, por isso a conta usa o customer_id da tabela final
-        ("+ customers", "customer_id", customers, df["customer_id"].isin(customers["customer_id"])),
-        ("+ sellers", "seller_id", sellers, items["seller_id"].isin(sellers["seller_id"])),
-    ]
     linhas = []
-    for nome, chave, outra_tabela, tem_par in merges:
+    df = items
+    for nome, chave, outra_tabela in [
+        ("items + orders", "order_id", orders),
+        ("+ products", "product_id", products),
+        ("+ customers", "customer_id", customers),
+        ("+ sellers", "seller_id", sellers),
+    ]:
+        antes = len(df)
+        # indicator=True cria a coluna _merge, que marca "left_only" no item sem par
+        df = df.merge(outra_tabela, on=chave, how="left", indicator=True)
         linhas.append({
             "merge": nome,
             "chave": chave,
             "tipo": "left, N:1",
-            "linhas_antes": len(items),
+            "linhas_antes": antes,
             "linhas_depois": len(df),
             "linhas_outra_tabela": len(outra_tabela),
-            "itens_sem_par": int((~tem_par).sum()),
+            "itens_sem_par": int((df["_merge"] == "left_only").sum()),
         })
+        df = df.drop(columns="_merge")
     return pd.DataFrame(linhas)
 
 
@@ -155,12 +169,21 @@ def recortar_pedidos(orders, items, n):
 
 
 if __name__ == "__main__":
+    # O argparse recusa "--amostra" sem número, "--amostra abc" e argumento a mais,
+    # em vez de cair na base completa e sobrescrever o CSV sem avisar.
+    parser = argparse.ArgumentParser(description="Pipeline da Frente 3")
+    parser.add_argument("--amostra", type=int, metavar="N",
+                        help="roda só em N pedidos sorteados e não grava o CSV")
+    amostra = parser.parse_args().amostra
+
     orders, items, products, customers, sellers = ler_brutos()
 
-    amostra = len(sys.argv) == 3 and sys.argv[1] == "--amostra"
-    if amostra:
-        orders, items = recortar_pedidos(orders, items, int(sys.argv[2]))
-        print(f"recorte: {sys.argv[2]} pedidos sorteados (semente 42)\n")
+    if amostra is not None:
+        total = items["order_id"].nunique()
+        if not 1 <= amostra <= total:
+            sys.exit(f"--amostra precisa estar entre 1 e {total} pedidos")
+        orders, items = recortar_pedidos(orders, items, amostra)
+        print(f"recorte: {amostra} pedidos sorteados (semente 42)\n")
 
     df = preprocessar(orders, items, products, customers, sellers)
 
@@ -175,17 +198,16 @@ if __name__ == "__main__":
     print("=== limpeza (Frente 1): linhas antes e depois ===")
     print(impacto.to_string(index=False))
     print("\n=== merges (Frente 2) ===")
-    print(historico_merges(*limpos, df).to_string(index=False))
+    print(historico_merges(*limpos).to_string(index=False))
     print(f"\ntabela final: {len(df)} linhas x {len(df.columns)} colunas")
     print("chave (order_id, order_item_id) única, uma linha por item")
 
-    if amostra:
+    if amostra is not None:
         colunas = ["order_id", "order_item_id", "customer_state", "price",
                    "freight_value", "frete_sobre_total_pedido"]
         print()
         print(df[colunas].head(10).to_string(index=False))
     else:
-        # lineterminator="\n": o arquivo sai igual no Windows, no Linux e no Mac.
-        df.to_csv(CSV_FINAL, index=False, lineterminator="\n")
+        df.to_csv(CSV_FINAL, **OPCOES_CSV)
         tamanho = CSV_FINAL.stat().st_size / 1024 / 1024
         print(f"arquivo: data/processed/{CSV_FINAL.name} ({tamanho:.1f} MB)")

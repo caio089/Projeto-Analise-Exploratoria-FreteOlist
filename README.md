@@ -41,10 +41,19 @@ Os outros arquivos do zip (geolocation, payments, reviews e tradução de catego
 
 ## Ambiente
 
+Linux, Mac ou Git Bash no Windows:
+
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate      # Linux/Mac
-.venv\Scripts\activate         # Windows
+source .venv/bin/activate        # no Git Bash do Windows: source .venv/Scripts/activate
+pip install -r requirements.txt
+```
+
+PowerShell no Windows:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 

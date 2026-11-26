@@ -4,8 +4,9 @@ Testes automáticos do pipeline (Frente 3).
 Rodar depois do python 04_pipeline.py (um dos testes confere o CSV gerado):
     python 05_testes_pipeline.py
 
-Todo cenário confere: não quebra, não duplica linha, chave (order_id, order_item_id)
-única, mesmas colunas da tabela final e DataFrames de entrada sem alteração.
+Todo cenário confere: não quebra, não duplica nem perde linha (compara com os itens
+depois da limpeza), chave (order_id, order_item_id) única, mesmas colunas da tabela
+final e DataFrames de entrada sem alteração.
 """
 
 import importlib
@@ -43,7 +44,10 @@ def rodar_e_conferir(orders, items, products, customers, sellers):
 
     df = pipeline.preprocessar(orders, items, products, customers, sellers)
 
-    assert len(df) == len(items), f"{len(items)} itens viraram {len(df)} linhas"
+    # Compara com os itens que sobram da limpeza, não com o bruto:
+    # item com preço negativo, por exemplo, sai na limpeza e não é erro do pipeline.
+    itens_limpos = limpeza.limpar_bases(orders, items, products, customers, sellers)[1]
+    assert len(df) == len(itens_limpos), f"{len(itens_limpos)} itens viraram {len(df)} linhas"
     assert not df.duplicated(subset=["order_id", "order_item_id"]).any(), "chave repetida"
     assert list(df.columns) == pipeline.COLUNAS_FINAIS, "colunas diferentes"
     for base, copia in zip(entradas, copias):
@@ -56,13 +60,23 @@ def teste_completo(brutos):
     assert len(df) == 112650, f"esperava 112650 linhas, veio {len(df)}"
 
     limpos = limpeza.limpar_bases(*brutos)
-    historico = pipeline.historico_merges(*limpos, df)
+    historico = pipeline.historico_merges(*limpos)
+    assert (historico["linhas_depois"] == historico["linhas_antes"]).all(), "merge mudou linhas"
     assert historico["itens_sem_par"].sum() == 0, "item sem par na base real"
 
     # Na base completa a seleção fixa tem que dar exatamente o resultado do João.
     df_joao, _ = transformacoes.transformar_bases(*limpos)
     assert df.equals(df_joao), "diferente do transformar_bases do João"
-    return f"{len(df)} linhas x {len(df.columns)} colunas, igual ao transformar_bases do João"
+
+    # O CSV versionado tem que ser exatamente o que o pipeline gera hoje.
+    csv_atual = df.to_csv(**pipeline.OPCOES_CSV).encode("utf-8")
+    assert pipeline.CSV_FINAL.read_bytes() == csv_atual, (
+        "CSV desatualizado: rode python 04_pipeline.py"
+    )
+    return (
+        f"{len(df)} linhas x {len(df.columns)} colunas, igual ao transformar_bases "
+        "do João e ao CSV versionado"
+    )
 
 
 def colunas_do_dicionario():
@@ -144,7 +158,7 @@ def teste_chave_sem_match(brutos):
     df = rodar_e_conferir(orders, items, products, customers, sellers)
 
     limpos = limpeza.limpar_bases(orders, items, products, customers, sellers)
-    sem_par = pipeline.historico_merges(*limpos, df).set_index("chave")["itens_sem_par"]
+    sem_par = pipeline.historico_merges(*limpos).set_index("chave")["itens_sem_par"]
     itens_cliente_falso = (items["order_id"] == pedido_cliente_falso).sum()
     assert sem_par["order_id"] == 1
     assert sem_par["product_id"] == 1

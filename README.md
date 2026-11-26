@@ -14,7 +14,7 @@ Trabalho final de Ciência de Dados (UNIFSA) — Briefing 4 (precificação de f
 
 Há também EDA de apoio em `notebooks/01_eda.ipynb` (entrada da limpeza).
 
-Roteiro: [`roteiro_frentes.html`](roteiro_frentes.html)
+O que falta (João / Ryan / Geroba / Erick): [`docs/o_que_falta_fazer.md`](docs/o_que_falta_fazer.md)
 
 ## Perguntas (Briefing 4)
 

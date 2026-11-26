@@ -139,7 +139,7 @@ def _minmax(serie):
     maior = serie.max(skipna=True)
     # max igual a min: nao tem escala. Deixo 0 onde existe valor.
     if pd.isna(menor) or pd.isna(maior) or maior == menor:
-        saida = pd.Series(pd.NA, index=serie.index, dtype="float64")
+        saida = pd.Series(float("nan"), index=serie.index, dtype="float64")
         saida.loc[serie.notna()] = 0.0
         return saida
     return (serie - menor) / (maior - menor)
@@ -150,7 +150,7 @@ def _zscore(serie):
     media = serie.mean(skipna=True)
     desvio = serie.std(skipna=True)
     if pd.isna(desvio) or desvio == 0:
-        saida = pd.Series(pd.NA, index=serie.index, dtype="float64")
+        saida = pd.Series(float("nan"), index=serie.index, dtype="float64")
         saida.loc[serie.notna()] = 0.0
         return saida
     return (serie - media) / desvio

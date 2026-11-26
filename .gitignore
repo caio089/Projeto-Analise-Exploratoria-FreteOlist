@@ -5,6 +5,7 @@ __pycache__/
 .ipynb_checkpoints/
 data/raw/
 data/processed/*_limpo.csv
+data/processed/itens_transformados.csv
 *.egg-info/
 .idea/
 .vscode/

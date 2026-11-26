@@ -43,3 +43,33 @@ Isso gera `data/processed/*_limpo.csv`. Os brutos em `data/raw/` não são alter
 - Feature engineering, encoding, MinMax/Z-score  
 - Pipeline final e CSV analítico  
 - Painel e resposta de negócio  
+
+---
+
+# Diário de Decisões — Anexo B (continuação)
+
+**Frente 2 (transformação e feature engineering)** · Responsável: João Manoel  
+**Base:** saídas da Frente 1 (`limpar_bases`) · Olist  
+
+Rodei `python 03_transformacoes.py`. A limpeza não foi refeita. Os números abaixo saíram dessa execução. A tabela continua com uma linha por item.
+
+| Nº | Etapa | Problema encontrado | Decisão tomada | Justificativa | Impacto nos dados |
+|----|-------|---------------------|----------------|---------------|-------------------|
+| 9 | Merges | Juntar orders, products, customers e sellers no item pode multiplicar linha se a chave do outro lado repetir. Aí o frete entra duas vezes. | Juntei nesta ordem: items → orders (`order_id`) → products (`product_id`) → customers (`customer_id` do pedido) → sellers (`seller_id` do item). Conferi se o número de linhas mudou. | O diagnóstico já tinha esses joins como N:1. Se a linha cresce, a pergunta 1 infla preço e frete. Por isso a checagem ficou no código, não só no olho. | 112.650 linhas antes e 112.650 depois. Nenhum merge multiplicou item. |
+| 10 | Feature aritmética | A pergunta 2 fala de dimensão, mas comprimento, altura e largura separados não dizem o tamanho da caixa. | Criei `volume_cm3` = comprimento × altura × largura. | É a conta mais direta de volume. Se um lado está vazio, o volume fica vazio. Não preenchi com média, pelo mesmo motivo da limpeza: não quero inventar tamanho. | 18 itens ficaram sem volume (faltou dimensão). O resto recebeu a coluna nova. Nenhuma linha foi apagada. |
+| 11 | Feature de agregação | `price` e `freight_value` são do item. As perguntas 1 e 3 olham o pedido. | Somei preço e frete por `order_id` (`soma_price_pedido` e `soma_freight_pedido`) e repeti o valor em cada item daquele pedido. | Agregar antes de comparar UF é o que o contrato pede. Usei `transform`, então a soma volta na mesma linha e a base não vira uma linha por pedido. | 0 linhas criadas ou removidas. A soma do pedido aparece em todo item daquele `order_id`. |
+| 12 | Feature de razão | Quero a parte do frete no valor do pedido, não só no item. Se preço + frete der 0, a divisão quebra. | `frete_sobre_total_pedido` = soma do frete / (soma do preço + soma do frete). Se o total for 0, deixo vazio. | A pergunta 1 é “em quais estados o frete pesa mais”. No item isso engana quando o pedido tem vários produtos. Total zero não apareceu, mas deixei a proteção. | 0 razões vazias. A razão ficou entre 0 e cerca de 0,96. Não somei essa coluna de novo: ela já é do pedido inteiro. |
+| 13 | Feature temporal | A data de compra estava só como timestamp. | Extraí `ano_compra` e `mes_compra` de `order_purchase_timestamp`. | O painel e a frente do Ryan podem recortar período sem converter data de novo. Mantive o timestamp original. | Anos 2016, 2017 e 2018. Mês de 1 a 12. 0 linhas removidas. |
+| 14 | Codificação | UF e categoria são texto. Modelo costuma pedir número, e o painel precisa do nome legível. | Criei `customer_state_cod`, `seller_state_cod` e `product_category_cod`. As colunas de texto continuam. | Se eu trocasse o texto pelo número, o painel ia mostrar código no lugar de SP. One-hot de 74 categorias ia espalhar coluna demais sem ajudar as três perguntas. | 27 UFs de cliente e 74 categorias. O texto original não saiu. |
+| 15 | MinMax e Z-score | Preço, frete, peso, dimensão e volume estão em unidades diferentes. Se o máximo for igual ao mínimo, ou o desvio for 0, a fórmula divide por zero. | Gerei `_minmax` e `_zscore` para preço, frete, peso, três dimensões, volume, somas do pedido e a razão. O valor original ficou. Se não houver variação, a escala vira 0 onde existe número. | As perguntas usam o valor em real e em grama. A escala é apoio, não substituto. Não escalei id, mês, ano nem código de categoria. | Nenhuma dessas colunas tinha variância zero nesta base. MinMax de `price` foi de 0 a 1. Z-score de `price` ficou com média 0 e desvio 1. |
+| 16 | Seleção de atributos | Tinha coluna que não entra nas perguntas (cidade, CEP, datas de entrega) e outras numéricas fracas perto do frete. | Tirei cidade, CEP e as datas que não são a compra. Nas numéricas que sobraram, tirei as com correlação absoluta com `freight_value` abaixo de 0,05. Não mexi em `customer_state`, `price`, `freight_value`, peso, dimensões e ids. | Cidade e CEP não respondem as três perguntas e ainda incham a tabela. O corte de 0,05 é simples: abaixo disso a coluna quase não anda junto com o frete. Peso e dimensão ficam mesmo com correlação que for, porque a pergunta 2 depende deles. | Saíram 9 colunas no filtro (cidades, CEPs e 5 datas). Por correlação saíram `product_name_lenght` (0,024) e `product_photos_qty` (0,022). `product_description_lenght` ficou (correlação 0,094). Variância zero: nenhuma. Base final: 112.650 linhas e 47 colunas. |
+
+## O que a Frente 2 não fez
+
+Não respondi as três perguntas de negócio e não montei o painel. Isso fica com o Ryan e o Geroba. O arquivo `data/processed/itens_transformados.csv` é a tabela desta frente, gerada na hora. Os brutos em `data/raw/` não mudam.
+
+## Como reproduzir
+
+```bash
+python 03_transformacoes.py
+```  

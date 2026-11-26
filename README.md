@@ -7,7 +7,7 @@ Trabalho final de Ciência de Dados (UNIFSA) — Briefing 4 (precificação de f
 | Pessoa | Frente | Entrega | Status |
 |--------|--------|---------|--------|
 | **Caio** | **Frente 1** | Limpeza + diário (`02_limpeza.py`, `docs/diario_decisoes.md`) | Feita |
-| **João Manoel** | Frente 2 | Transforms, features, dicionário | Aguardando |
+| **João Manoel** | Frente 2 | Transforms, features, dicionário (`03_transformacoes.py`, `docs/dicionario_dados.md`) | Feita |
 | **Ryan** | Frente 3 | Pipeline + CSV final | Aguardando |
 | **Geroba** | Frente 4 | Painel Streamlit | Aguardando |
 | **Erick** | Apoio / entrega | Consolidação PDF e envio (combinar com a equipe) | Aguardando |
@@ -45,6 +45,17 @@ python 02_limpeza.py
 - Função principal: `limpar_bases(orders, items, products, customers, sellers)`
 - Diário: `docs/diario_decisoes.md`
 - Saída de referência: `data/processed/*_limpo.csv` (gerada localmente; brutos não são alterados)
+
+## Frente 2 — transformações
+
+```bash
+python 03_transformacoes.py
+```
+
+- Chama `limpar_bases` do `02_limpeza.py` e não refaz a limpeza
+- Saída: `data/processed/itens_transformados.csv` (gerada localmente)
+- Dicionário: `docs/dicionario_dados.md`
+- Decisões: continuação em `docs/diario_decisoes.md`
 
 ## Links
 

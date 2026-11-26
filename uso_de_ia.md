@@ -4,5 +4,6 @@
 |----|------|------------|------------|--------------------------|----------------------|-------------------------------------|------|
 | 1 | 25/11/2026 | Caio | Cursor | Tirar dúvida sobre o PDF: o que é cada frente e o que entra na Frente 1 | Confirmei que Frente 1 = limpeza + diário | Conferi de novo na seção 2 do enunciado | - |
 | 2 | 25/11/2026 | Caio | Cursor | Revisar se a limpeza e o diário cobriam nulos, datas, outliers e pedidos sem item | Checklist do que conferir antes do handoff | Rodei `02_limpeza.py` e conferi as contagens do impacto | - |
+| 6 | 26/11/2026 | Ryan | Claude | Usei Claude para melhorar o código | - | - | - |
 
 Diário de decisões, sumário executivo, respostas de negócio e conclusões foram escritos pela equipe, sem IA.

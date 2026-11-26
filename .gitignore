@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.ipynb_checkpoints/
+data/raw/
+data/processed/*_limpo.csv
+*.egg-info/
+.idea/
+.vscode/

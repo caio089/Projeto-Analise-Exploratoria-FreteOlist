@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# CSV final sempre com LF, inclusive no checkout do Windows.
+# O 05_testes_pipeline.py confere esse arquivo byte a byte.
+data/processed/*.csv text eol=lf

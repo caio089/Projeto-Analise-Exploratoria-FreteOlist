@@ -61,7 +61,7 @@ Duplicatas de linha completa: **0** em todas as cinco tabelas.
 | Pergunta | Campos essenciais | Observação |
 |----------|-------------------|------------|
 | 1 — frete por estado | `customer_state`, `order_id`, `price`, `freight_value` | Agregar preço e frete por pedido antes de comparar UFs |
-| 2 — peso/dimensões vs frete | `product_weight_g`, `product_length_cm`, `product_height_cm`, `product_width_cm`, `freight_value` | Volume ainda não calculado aqui (feature da etapa Ryan) |
+| 2 — peso/dimensões vs frete | `product_weight_g`, `product_length_cm`, `product_height_cm`, `product_width_cm`, `freight_value` | Volume (`volume_cm3`) calculado na Frente 2, em `03_transformacoes.py` |
 | 3 — impacto da revisão | `customer_state` (e/ou outras dimensões), agregados de frete e contagem de pedidos/clientes | Critérios transparentes; sem simular política nesta etapa |
 
 ## 5. Diagnóstico (achados da EDA)
@@ -106,7 +106,7 @@ A limpeza (Caio — Frente 1) e as transformações (Frente 2) devem preservar:
 2. Valores monetários originais: `price`, `freight_value`.
 3. UF do cliente: `customer_state` (pergunta 1 e 3).
 4. Peso e dimensões do produto (pergunta 2).
-5. Timestamp de compra: `order_purchase_timestamp` (extração temporal na etapa Ryan).
+5. Timestamp de compra: `order_purchase_timestamp` (mês e ano extraídos na Frente 2).
 6. Granularidade final da tabela analítica: **item** (`order_id` + `order_item_id`), com colunas agregadas de pedido quando necessário, sem multiplicar linhas indevidamente nos merges.
 
 Decisões formais de limpeza: ver `docs/diario_decisoes.md` e `02_limpeza.py`.
